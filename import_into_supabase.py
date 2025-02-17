@@ -4,21 +4,22 @@ from dotenv import load_dotenv
 import os
 import io
 
-# Load environment variables from .env
+# Carregando variáveis do arquivo .env
 load_dotenv()
-
-# Fetch variables
 USER = os.getenv("user")
 PASSWORD = os.getenv("password")
 HOST = os.getenv("host")
 PORT = os.getenv("port")
 DBNAME = os.getenv("dbname")
 
-# Load DataFrame from CSV
-arquivo = fr"C:\Users\MSI\Desktop\supabase\deputies_dataset.csv"
+# Carregando dataframes
+arquivo = fr"C:\Users\MSI\Desktop\supabase\deputies_dataset.csv" #Insira o seu diretório do CSV
 df = pd.read_csv(arquivo)
 
-# Step 1: Connect to the database
+# Observação: o Pandas carrega vários tipos de arquivo, qualquer um servirá.
+# No entanto, verifica se esse dataframe está normalizado ou não, pois o Supabase é um banco relacional e não NoSQL
+
+# Conectar
 try:
     connection = psycopg2.connect(
         user=USER,
@@ -29,12 +30,12 @@ try:
     )
     print("Connection successful!")
 
-    # Create a cursor to execute SQL queries
+    # Cursor
     cursor = connection.cursor()
 
-    # Step 2: Dynamically create table schema
+    # Criando schema de tabelas
     def create_table_from_dataframe(df, table_name):
-        # Generate the SQL CREATE TABLE statement
+        # Criando o código SQL para criar o schema das tabelas
         columns = []
         for col_name, dtype in df.dtypes.items():
             if pd.api.types.is_integer_dtype(dtype):
@@ -46,15 +47,14 @@ try:
             elif pd.api.types.is_datetime64_any_dtype(dtype):
                 sql_type = "TIMESTAMP"
             elif pd.api.types.is_object_dtype(dtype):
-                # Check if the column contains dictionaries (e.g., JSON)
                 if isinstance(df[col_name].iloc[0], dict):
                     sql_type = "JSONB"
                 else:
                     sql_type = "TEXT"
             else:
-                sql_type = "TEXT"  # Default to TEXT for unknown types
+                sql_type = "TEXT"
 
-            if col_name == "id":  # Assume 'id' is the primary key
+            if col_name == "id":
                 columns.append(f"{col_name} {sql_type} PRIMARY KEY")
             else:
                 columns.append(f"{col_name} {sql_type}")
@@ -62,35 +62,35 @@ try:
         create_table_sql = f"CREATE TABLE {table_name} ({', '.join(columns)});"
         print(f"Creating table with SQL: {create_table_sql}")
 
-        # Execute the CREATE TABLE statement
+        # O cursor executa o script SQL da função anterior
         cursor.execute(create_table_sql)
         connection.commit()
-        print(f"Table '{table_name}' created successfully!")
+        print(f"Tabela '{table_name}' criada com sucesso!")
 
-    # Step 3: Insert DataFrame data into the table
+    # Inserir os dados do dataframe na tabela do Supabase
     def copy_dataframe_to_table(df, table_name):
-        # Create a string buffer to hold the CSV data
+        # Criar um buffer para guardar os dados do CSV
         buffer = io.StringIO()
         df.to_csv(buffer, index=False, header=False)
         buffer.seek(0)
 
-        # Use COPY to load the data
+        # Inserir dados via COPY
         try:
             cursor.copy_expert(f"COPY {table_name} FROM STDIN WITH CSV", buffer)
             connection.commit()
-            print(f"Data copied into table '{table_name}' successfully!")
+            print(f"Dados inseridos na tablea '{table_name}' com sucesso!")
         except Exception as e:
-            print(f"Failed to copy data: {e}")
+            print(f"Erro: {e}")
 
-    # Step 4: Run the process
-    TABLE_NAME = "teste2"  # Replace with your desired table name
+    # Executando o processo
+    TABLE_NAME = "teste2" # Nome da tabela que você deseja criar
     create_table_from_dataframe(df, TABLE_NAME)
     copy_dataframe_to_table(df, TABLE_NAME)
 
-    # Close the cursor and connection
+    # Fechando
     cursor.close()
     connection.close()
-    print("Connection closed.")
+    print("Saindo do supabase...")
 
 except Exception as e:
-    print(f"Failed to connect or execute queries: {e}")
+    print(f"Erro na conexão: {e}")
