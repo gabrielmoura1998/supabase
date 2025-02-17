@@ -1,18 +1,18 @@
+# Código usado para se conectar ao Supabase
+
 import psycopg2
 from dotenv import load_dotenv
 import os
 
-# Load environment variables from .env
+# Carregar variáveis do .env
 load_dotenv()
-
-# Fetch variables
 USER = os.getenv("user")
 PASSWORD = os.getenv("password")
 HOST = os.getenv("host")
 PORT = os.getenv("port")
 DBNAME = os.getenv("dbname")
 
-# Connect to the database
+# Conectar ao Supabase
 try:
     connection = psycopg2.connect(
         user=USER,
@@ -21,20 +21,20 @@ try:
         port=PORT,
         dbname=DBNAME
     )
-    print("Connection successful!")
+    print("Conectado!")
 
-    # Create a cursor to execute SQL queries
+    # Criando cursor
     cursor = connection.cursor()
 
-    # Example query
+    # Teste
     cursor.execute("SELECT NOW();")
     result = cursor.fetchone()
-    print("Current Time:", result)
+    print("Tempo atual:", result)
 
-    # Close the cursor and connection
+    # Fechando
     cursor.close()
     connection.close()
-    print("Connection closed.")
+    print("Conexão encerrada.")
 
 except Exception as e:
-    print(f"Failed to connect: {e}")
+    print(f"Erro: {e}")
